@@ -38,9 +38,16 @@ apiClient.interceptors.response.use(
     
     if (error.response?.status === 401) {
       // Handle unauthorized access
-      errorLog('🔒 Unauthorized access, redirecting to login');
-      localStorage.removeItem('authToken');
-      window.location.href = '/login';
+      errorLog('🔒 Unauthorized access detected');
+      
+      // Only auto-redirect if it's a GET request to prevent interrupting user actions
+      if (error.config?.method?.toLowerCase() === 'get') {
+        errorLog('🔒 GET request unauthorized, redirecting to login');
+        localStorage.removeItem('authToken');
+        window.location.href = '/login';
+      } else {
+        errorLog('🔒 Non-GET request unauthorized, letting component handle');
+      }
     }
     return Promise.reject(error);
   }

@@ -8,6 +8,7 @@ class CourseBase(BaseModel):
     description: Optional[str] = Field(None, max_length=2000)
     estimated_duration: Optional[int] = Field(None, ge=0, description="Minutes")
     is_published: bool = Field(default=False)
+    is_public: bool = Field(default=False, description="Whether course is publicly accessible")
 
 class CourseCreate(CourseBase):
     instructor_id: int = Field(..., description="ID from Auth Service")
@@ -18,6 +19,7 @@ class CourseUpdate(BaseModel):
     estimated_duration: Optional[int] = Field(None, ge=0)
     is_published: Optional[bool] = None
     is_active: Optional[bool] = None
+    is_public: Optional[bool] = None
 
 class CourseResponse(CourseBase):
     id: str = Field(..., description="Course ID")

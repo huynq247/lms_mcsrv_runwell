@@ -13,22 +13,22 @@ export interface AppConfig {
   ENVIRONMENT: string;
 }
 
-// Load config from environment variables
+// Load config from environment variables (Vite uses import.meta.env)
 export const config: AppConfig = {
-  API_BASE_URL: process.env.REACT_APP_API_BASE_URL || '',
-  AUTH_SERVICE_URL: process.env.REACT_APP_AUTH_SERVICE_URL || 'http://localhost:8001',
-  CONTENT_SERVICE_URL: process.env.REACT_APP_CONTENT_SERVICE_URL || 'http://localhost:8002',
-  ASSIGNMENT_SERVICE_URL: process.env.REACT_APP_ASSIGNMENT_SERVICE_URL || 'http://localhost:8004',
+  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
+  AUTH_SERVICE_URL: import.meta.env.VITE_AUTH_SERVICE_URL || 'http://localhost:8001',
+  CONTENT_SERVICE_URL: import.meta.env.VITE_CONTENT_SERVICE_URL || 'http://localhost:8002',
+  ASSIGNMENT_SERVICE_URL: import.meta.env.VITE_ASSIGNMENT_SERVICE_URL || 'http://localhost:8004',
   
-  ENABLE_DEBUG_LOGS: process.env.REACT_APP_DEBUG === 'true',
-  ENABLE_ANALYTICS: process.env.REACT_APP_ENABLE_ANALYTICS === 'true',
+  ENABLE_DEBUG_LOGS: import.meta.env.VITE_ENABLE_DEBUG_LOGS === 'true',
+  ENABLE_ANALYTICS: import.meta.env.VITE_ENABLE_ANALYTICS === 'true',
   
-  ITEMS_PER_PAGE: parseInt(process.env.REACT_APP_ITEMS_PER_PAGE || '10'),
-  TIMEOUT_MS: parseInt(process.env.REACT_APP_TIMEOUT_MS || '30000'),
+  ITEMS_PER_PAGE: parseInt(import.meta.env.VITE_ITEMS_PER_PAGE || '10'),
+  TIMEOUT_MS: parseInt(import.meta.env.VITE_TIMEOUT_MS || '30000'),
   
-  APP_NAME: process.env.REACT_APP_NAME || 'LMS Teacher Portal',
-  VERSION: process.env.REACT_APP_VERSION || '1.0.0',
-  ENVIRONMENT: process.env.NODE_ENV || 'development'
+  APP_NAME: import.meta.env.VITE_APP_NAME || 'LMS Admin Portal',
+  VERSION: import.meta.env.VITE_APP_VERSION || '1.0.0',
+  ENVIRONMENT: import.meta.env.MODE || 'development'
 };
 
 // Helper functions

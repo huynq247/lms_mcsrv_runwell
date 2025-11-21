@@ -110,25 +110,63 @@ async def get_courses(
         
         # Role-based filtering
         if current_user.role == UserRole.STUDENT:
-            # Students can only see assigned courses
+            # Students can see:
+            # 1. Their assigned courses
+            # 2. Public courses (is_public=True AND is_published=True)
             assigned_course_ids = await get_assigned_content_ids(current_user.id, "course")
-            if not assigned_course_ids:
-                # No assigned courses, return empty result
-                return {
-                    "items": [],
-                    "total": 0,
-                    "page": page,
-                    "size": size,
-                    "total_pages": 0
-                }
             
-            # Filter by assigned course IDs
-            filters = CourseFilter(
+            # Get assigned courses
+            assigned_filters = CourseFilter(
                 instructor_id=instructor_id,
                 is_published=is_published,
                 is_active=is_active,
-                course_ids=assigned_course_ids
+                course_ids=assigned_course_ids if assigned_course_ids else []
             )
+            assigned_result = await course_crud.get_courses(pagination, assigned_filters)
+            
+            # Get public courses
+            public_filters = CourseFilter(
+                instructor_id=instructor_id,
+                is_published=True,  # Public courses must be published
+                is_active=True,
+            )
+            # Fetch public courses separately
+            public_courses_cursor = db["courses"].find({
+                "is_public": True,
+                "is_published": True,
+                "is_active": True
+            })
+            public_courses = await public_courses_cursor.to_list(length=None)
+            
+            # Merge results (avoid duplicates)
+            assigned_ids = {str(c.id) for c in assigned_result["items"]}
+            all_courses = list(assigned_result["items"])
+            
+            for pub_course in public_courses:
+                if str(pub_course["_id"]) not in assigned_ids:
+                    # Convert to Course object
+                    from app.models.content import Course
+                    course_obj = Course(**pub_course)
+                    all_courses.append(course_obj)
+            
+            # Apply search filter if provided
+            if search:
+                search_lower = search.lower()
+                all_courses = [
+                    c for c in all_courses
+                    if search_lower in c.title.lower() or 
+                       (c.description and search_lower in c.description.lower())
+                ]
+            
+            result = {
+                "items": all_courses,
+                "total": len(all_courses),
+                "page": page,
+                "size": size,
+                "pages": (len(all_courses) + size - 1) // size,
+                "has_next": page * size < len(all_courses),
+                "has_prev": page > 1
+            }
         else:  # TEACHER or ADMIN - can see all courses
             filters = CourseFilter(
                 instructor_id=instructor_id,
@@ -150,6 +188,7 @@ async def get_courses(
                 "estimated_duration": course.estimated_duration,
                 "is_published": course.is_published,
                 "is_active": course.is_active,
+                "is_public": getattr(course, 'is_public', False),
                 "total_lessons": course.total_lessons,
                 "created_at": course.created_at.isoformat() if course.created_at else None,
                 "updated_at": course.updated_at.isoformat() if course.updated_at else None

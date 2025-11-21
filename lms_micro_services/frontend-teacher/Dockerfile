@@ -1,37 +1,56 @@
-FROM node:16-alpine as build
-
-# Accept build argument for API URL
-ARG REACT_APP_API_BASE_URL=/api
-
-# Tăng bộ nhớ cho Node.js và tối ưu hóa cấu hình npm
-ENV NODE_OPTIONS="--max-old-space-size=8192"
-ENV GENERATE_SOURCEMAP=false
-ENV DISABLE_ESLINT_PLUGIN=true
-ENV REACT_APP_API_BASE_URL=$REACT_APP_API_BASE_URL
+# Build stage
+FROM node:20-alpine as build
 
 WORKDIR /app
 
-# Copy package.json and install dependencies
+# Copy package files
 COPY package*.json ./
-RUN npm ci --silent
+COPY bun.lockb* ./
 
-# Copy all files
+# Install dependencies
+RUN npm install
+
+# Copy source code
 COPY . .
 
-# Build the React app với tùy chọn bỏ qua warnings và tối ưu build
-RUN CI=false DISABLE_ESLINT_PLUGIN=true npm run build
+# Build arguments for environment variables
+ARG VITE_API_BASE_URL
+ARG VITE_AUTH_SERVICE_URL
+ARG VITE_CONTENT_SERVICE_URL
+ARG VITE_ASSIGNMENT_SERVICE_URL
+ARG VITE_APP_NAME
+ARG VITE_APP_VERSION
+ARG VITE_ENABLE_DEBUG_LOGS
+ARG VITE_ENABLE_ANALYTICS
+
+# Set environment variables
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+ENV VITE_AUTH_SERVICE_URL=$VITE_AUTH_SERVICE_URL
+ENV VITE_CONTENT_SERVICE_URL=$VITE_CONTENT_SERVICE_URL
+ENV VITE_ASSIGNMENT_SERVICE_URL=$VITE_ASSIGNMENT_SERVICE_URL
+ENV VITE_APP_NAME=$VITE_APP_NAME
+ENV VITE_APP_VERSION=$VITE_APP_VERSION
+ENV VITE_ENABLE_DEBUG_LOGS=$VITE_ENABLE_DEBUG_LOGS
+ENV VITE_ENABLE_ANALYTICS=$VITE_ENABLE_ANALYTICS
+
+# Build the app
+RUN npm run build
 
 # Production stage
-FROM nginx:1.25.3-alpine
-COPY --from=build /app/build /usr/share/nginx/html
+FROM nginx:alpine
+
+# Copy custom nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Copy built assets from build stage
+COPY --from=build /app/dist /usr/share/nginx/html
+
+# Expose port 80
 EXPOSE 80
 
-# Install curl for health check
-RUN apk add --no-cache curl
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
 
-# Add health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:80/ || exit 1
-
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"]
